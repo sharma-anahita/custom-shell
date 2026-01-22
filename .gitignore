@@ -1,0 +1,14 @@
+# Build artifacts
+*.o
+*.exe
+*.out
+
+# Temporary files
+*~
+*.swp
+
+# VS Code
+.vscode/
+
+# MSYS2 / Windows
+*.dll
