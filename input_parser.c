@@ -1,53 +1,63 @@
-#include "shelly.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
 
-char** input_parser(char* input){
-    //allocate space for maximum number of arguments
-    size_t bufferSize  =MAX_INPUT_SIZE; //max input size for 1 argument
-    char** tokens = malloc(bufferSize * sizeof(char *)); //what is the meaning of this line?
-    //this line allocates memory for an array of character pointers (strings)
+#define MAX_TOKENS 64
 
-    //Error handling for malloc
-
-    if(!tokens){
-        perror("malloc failed to allocate memory to input parser");
+char **input_parser(char *input)
+{
+    char **tokens = malloc(sizeof(char *) * MAX_TOKENS);
+    if (!tokens) {
+        perror("malloc");
         exit(EXIT_FAILURE);
-        //TELLS the OS that the program has failed
     }
 
-    //if we have allocated memory succesfully
-    //now we will tokenize the input string
+    size_t i = 0;          // index in input string
+    size_t token_idx = 0;  // index in tokens array
 
-    char* token = NULL;
-    size_t token_len = 0;
-    size_t position = 0;
-    //tokenize the input based on whitespace?
-    for(int i = 0;input[i];i++){
-        token = &input[position];
-        token_len = 0;
-        while(input[i] && input[i] != ' '){
-            //not a whitespace and a valid character
-            token_len++;
+    while (input[i] != '\0') {
+
+        /* 1️⃣ Skip leading whitespace */
+        while (isspace((unsigned char)input[i])) {
             i++;
         }
-        tokens[position] = malloc(token_len*sizeof(char));
 
-        //see if any space was allocated
-        if(!tokens[position]){
-            perror("mallloc failed to allocate space to token");
+        if (input[i] == '\0') {
+            break;
+        }
+
+        /* 2️⃣ Mark start of token */
+        size_t start = i;
+
+        /* 3️⃣ Find end of token */
+        while (input[i] != '\0' && !isspace((unsigned char)input[i])) {
+            i++;
+        }
+
+        size_t len = i - start;
+
+        /* 4️⃣ Allocate memory for token (+1 for '\0') */
+        tokens[token_idx] = malloc(len + 1);
+        if (!tokens[token_idx]) {
+            perror("malloc");
             exit(EXIT_FAILURE);
-            //but what if it is a whitespace?
-            //we will handle that later
         }
 
-        //space has been allocated 
-        //now put the chars in the token
-        for(int j = 0;j<token_len;j++){
-            //copy the characters            
-            tokens[position][j] = token[j];
-            
+        /* 5️⃣ Copy token */
+        memcpy(tokens[token_idx], &input[start], len);
+        tokens[token_idx][len] = '\0';
+
+        token_idx++;
+
+        /* 6️⃣ Prevent overflow */
+        if (token_idx >= MAX_TOKENS - 1) {
+            break;
         }
-        tokens[position][token_len] = '\0'; //null terminate the string
-        position++;
     }
-    
+
+    /* 7️⃣ NULL-terminate argv */
+    tokens[token_idx] = NULL;
+
+    return tokens;
 }
