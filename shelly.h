@@ -14,7 +14,7 @@ void free_tokens(char **tokens);
 int my_strcmp(const char *str1, const char *str2);
 
 /* builtins */
-void command_cd(char **args, char *inputDirectory);
+void command_cd(char **args, char **inputDirectory);
 void command_pwd(char **args);
 void command_which(char **args, char **env);
 void command_echo(char **args);

@@ -1,9 +1,9 @@
 #include "shelly.h" 
 
-void command_cd(char **args, char *cwd)
-{
-    printf("cd not implemented\n");
-}
+// void command_cd(char **args, char *cwd)
+// {
+//     printf("cd not implemented\n");
+// }
 
 void command_pwd(char **args)
 {

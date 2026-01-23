@@ -15,13 +15,14 @@
 // we will also manage path through our shell
 // and error handling will also be done
 // we will first have to create a loop that will keep on running until the user wants to exit
-int shell_builtin_execute(char **args, char **env, char *inputDirectory)
+int shell_builtin_execute(char **args, char **env, char **inputDirectory)
 {
     // this function will execute the inbuilt commands
     // cd, pwd,whihch, echo,exit,help,env,set,unset,etc
     printf("Executing built in command: %s\n", args[0]);
     if (my_strcmp(args[0], "cd") == 0)
     {
+        printf("you called cd\n");
         command_cd(args, inputDirectory);
     }
     else if (my_strcmp(args[0], "pwd") == 0)
@@ -73,7 +74,7 @@ void shell_loop(char **env)
     char *inputDirectory = getcwd(NULL, 0);
 
     while (1) {
-        printf("(shelly)> ");
+        printf("(%s)> ",inputDirectory);
         fflush(stdout);
 
         if (!fgets(input, sizeof(input), stdin)) {
@@ -88,7 +89,7 @@ void shell_loop(char **env)
             continue;
         }
 
-        shell_builtin_execute(args, env, inputDirectory);
+        shell_builtin_execute(args, env, &inputDirectory);
         free_tokens(args);
     }
 
