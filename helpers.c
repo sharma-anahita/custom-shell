@@ -7,13 +7,13 @@ void command_which(char **args, char **env)
     printf("which not implemented\n");
 }
 
-void command_echo(char **args)
-{
-    for (int i = 1; args[i]; i++) {
-        printf("%s ", args[i]);
-    }
-    printf("\n");
-}
+// void command_echo(char **args)
+// {
+//     for (int i = 1; args[i]; i++) {
+//         printf("%s ", args[i]);
+//     }
+//     printf("\n");
+// }
 
 void command_help(char **args)
 {

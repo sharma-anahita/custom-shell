@@ -100,6 +100,8 @@ void shell_loop(char **env)
 
 int main(int argc, char **argv, char **env)
 {
+    
+setvbuf(stdout, NULL, _IOLBF, 0);
     // env will help us get the environment variables
     (void)argc;
     (void)argv; // we don't need them

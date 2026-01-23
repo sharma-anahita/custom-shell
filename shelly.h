@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define MAX_INPUT_SIZE 1024
 #define MAX_PATH_LENGTH 4096
