@@ -7,7 +7,7 @@
 #include <string.h>
 
 #define MAX_INPUT_SIZE 1024
-
+#define MAX_PATH_LENGTH 4096
 char **input_parser(char *input);
 void free_tokens(char **tokens);
 

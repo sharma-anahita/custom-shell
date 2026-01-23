@@ -1,17 +1,6 @@
 #include "shelly.h" 
 
-// void command_cd(char **args, char *cwd)
-// {
-//     printf("cd not implemented\n");
-// }
-
-void command_pwd(char **args)
-{
-    char buf[1024];
-    if (getcwd(buf, sizeof(buf))) {
-        printf("%s\n", buf);
-    }
-}
+ 
 
 void command_which(char **args, char **env)
 {

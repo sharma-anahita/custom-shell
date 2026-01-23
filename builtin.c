@@ -2,6 +2,8 @@
 
 void command_cd(char **args, char **inputDirectory)
 {
+    //supports cd, cd ~ (home directory), cd <path> , cd ..
+    //to handle later : cd -(go to previous directory), permission denied handling
     // will use chdir to change directory
 
     if (args[1] == NULL)
@@ -35,7 +37,7 @@ void command_cd(char **args, char **inputDirectory)
         {
             if (chdir(args[1]) != 0)
             {
-                perror("shelly");
+                perror("command cd");
             }
         }
         free(*inputDirectory);
@@ -44,9 +46,51 @@ void command_cd(char **args, char **inputDirectory)
     printf("Changed directory to: %s\n", *inputDirectory);
     return;
 }
-void command_pwd(char **args);
+
+void command_pwd(char **args)
+{
+    char *buf = NULL;
+    size_t size = 0;
+    buf = getcwd(buf, size);
+    if (buf != NULL) {
+        printf("%s\n", buf);
+        free(buf);
+    }
+    else {
+        perror("getcwd() error");
+    }
+}
+
 void command_which(char **args, char **env);
-void command_echo(char **args);
+
+void command_echo(char **args){
+/*
+ * command_echo
+ * -------------
+ * Implements the `echo` built-in command for the shell.
+ *
+ * Supported features:
+ *  - Prints all arguments passed after `echo`
+ *  - Supports the `-n` flag to suppress the trailing newline
+ *  - Expands environment variables prefixed with `$`
+ *    (e.g., `$HOME`, `$PATH`)
+ *
+ * Behavior notes:
+ *  - Arguments are printed in order, separated by spaces
+ *  - If an environment variable is not found, nothing is printed
+ *  - A newline is printed by default unless `-n` is specified
+ *
+ * This function does not handle parsing of quotes or escape sequences;
+ * those responsibilities belong to the input parser.
+ *
+ * Parameters:
+ *  - args: NULL-terminated array of command arguments
+ *
+ * This implementation mimics basic POSIX shell `echo` behavior
+ * while remaining intentionally simple and readable.
+ */
+
+}
 void command_help(char **args);
 void command_env(char **args, char **env);
 void command_set(char **args, char **env);

@@ -15,6 +15,7 @@
 // we will also manage path through our shell
 // and error handling will also be done
 // we will first have to create a loop that will keep on running until the user wants to exit
+
 int shell_builtin_execute(char **args, char **env, char **inputDirectory)
 {
     // this function will execute the inbuilt commands
@@ -67,6 +68,7 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
 }
 #define INPUT_BUFSIZE 1024
 
+//binary commands : ls, cat, grep, ps, top, etc  // will call them external commands
 void shell_loop(char **env)
 {
     char input[INPUT_BUFSIZE];
@@ -74,7 +76,7 @@ void shell_loop(char **env)
     char *inputDirectory = getcwd(NULL, 0);
 
     while (1) {
-        printf("(%s)> ",inputDirectory);
+        printf("(My_Shelly)>%s ", inputDirectory);
         fflush(stdout);
 
         if (!fgets(input, sizeof(input), stdin)) {
