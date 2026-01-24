@@ -6,26 +6,14 @@ void command_which(char **args, char **env)
 {
     printf("which not implemented\n");
 }
-
-// void command_echo(char **args)
-// {
-//     for (int i = 1; args[i]; i++) {
-//         printf("%s ", args[i]);
-//     }
-//     printf("\n");
-// }
+ 
 
 void command_help(char **args)
 {
     printf("help not implemented\n");
 }
 
-void command_env(char **args, char **env)
-{
-    for (int i = 0; env[i]; i++) {
-        printf("%s\n", env[i]);
-    }
-}
+ 
 
 void command_set(char **args, char **env)
 {
@@ -57,4 +45,38 @@ void free_tokens(char **tokens)
         free(tokens[i]);
     }
     free(tokens);
+}
+int my_strLen(const char* name){
+    int len = 0;
+    while(*name){
+        name++;
+        len++;
+    }
+    return len;
+}
+int my_strncmp(const char* str1,const char* str2,size_t n){
+    int i =0; 
+    while(i<n && str1[i] && str2[i]){
+        if(str1[i] != str2[i]){
+            return (unsigned char)str1[i] - (unsigned char)str2[i];
+        }
+        i++;
+        
+    }   
+    if(i==n) return 0;
+    return (unsigned char)str1 - (unsigned char)str2;
+}   
+char* my_getenv(const char* name,char ** env){
+    if(name==NULL || env==NULL){
+        return NULL;
+        
+    }
+    size_t nameLen = my_strLen(name);
+    for (size_t i = 0; env[i]; i++)
+    {
+        if(my_strncmp(env[i],name,nameLen)==0 && env[i][nameLen]=='='){
+            return &env[i][nameLen+1];
+        }
+    }
+    
 }

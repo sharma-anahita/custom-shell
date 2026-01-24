@@ -24,7 +24,7 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
     if (my_strcmp(args[0], "cd") == 0)
     {
         printf("you called cd\n");
-        command_cd(args, inputDirectory);
+        command_cd(args, inputDirectory,env);
     }
     else if (my_strcmp(args[0], "pwd") == 0)
     {
@@ -36,7 +36,7 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "echo") == 0)
     {
-        command_echo(args);
+        command_echo(args,env);
     }
     else if (my_strcmp(args[0], "help") == 0)
     {

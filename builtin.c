@@ -1,6 +1,6 @@
 #include "shelly.h"
 
-void command_cd(char **args, char **inputDirectory)
+void command_cd(char **args, char **inputDirectory,char** env)
 {
     // supports cd, cd ~ (home directory), cd <path> , cd ..
     // to handle later : cd -(go to previous directory), permission denied handling
@@ -17,10 +17,10 @@ void command_cd(char **args, char **inputDirectory)
         if (my_strcmp(args[1], "~") == 0)
         {
             // change to home directory
-            char *path = getenv("HOME");
+            char *path = my_getenv("HOME",env);
             if (!path)
             {
-                path = getenv("USERPROFILE"); // for Windows compatibility
+                path = my_getenv("USERPROFILE",env); // for Windows compatibility
             }
 
             if (!path)
@@ -49,6 +49,7 @@ void command_cd(char **args, char **inputDirectory)
 
 void command_pwd(char **args)
 {
+    (void) args;
     char *buf = NULL;
     size_t size = 0;
     buf = getcwd(buf, size);
@@ -65,8 +66,8 @@ void command_pwd(char **args)
 
 void command_which(char **args, char **env);
 
-void command_echo(char **args)
-{ 
+void command_echo(char **args,char ** env)
+{
     /*
      * command_echo
      * -------------
@@ -99,9 +100,7 @@ void command_echo(char **args)
     }
     else
     {
-        // print all args
-        // check if args[2] is -n
-        int i = 1;
+        size_t i = 1;
         if (args[i] && my_strcmp(args[i], "-n") == 0)
         {
 
@@ -109,13 +108,36 @@ void command_echo(char **args)
             newLine = false;
             i++;
         }
-        while (args[i])
+        for (; args[i] != NULL; i++)
         {
-            printf("%s", args[i]);
-            i++;
-            if (args[i] != NULL)
+            if (args[i] && args[i][0] == '$')
             {
-                printf(" ");
+                char *variable = args[i] + 1;
+                
+                char *value = my_getenv(variable,env);
+
+                if (!value && my_strcmp(variable, "HOME") == 0)
+                {
+                    value = my_getenv("USERPROFILE",env);
+                }
+                if (value)
+                {
+                    printf("%s", value);
+                }
+                if (args[i + 1])
+                {
+                    printf(" ");
+                }
+            }
+            else
+            { 
+                    printf("%s", args[i]);
+                    
+                    if (args[i+1] != NULL)
+                    {
+                        printf(" ");
+                    }
+                
             }
         }
     }
@@ -123,15 +145,24 @@ void command_echo(char **args)
     {
         printf("\n");
         printf("\n");
-        fflush(stdout);
     }
     else
     {
         printf("\n");
     }
+    fflush(stdout);
     return;
 }
+
+
 void command_help(char **args);
-void command_env(char **args, char **env);
+void command_env(char **args, char **env){
+    //implment version with arguments too
+    (void)args;
+    for(size_t i = 0;env[i];i++){
+        printf("%s",env[i]);
+        printf("\n");
+    }
+}
 void command_set(char **args, char **env);
 void command_unset(char **args, char **env);

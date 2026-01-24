@@ -15,15 +15,16 @@ void free_tokens(char **tokens);
 int my_strcmp(const char *str1, const char *str2);
 
 /* builtins */
-void command_cd(char **args, char **inputDirectory);
+void command_cd(char **args, char **inputDirectory,char** env);
 void command_pwd(char **args);
 void command_which(char **args, char **env);
-void command_echo(char **args);
+void command_echo(char **args,char** env);
 void command_help(char **args);
 void command_env(char **args, char **env);
 void command_set(char **args, char **env);
 void command_unset(char **args, char **env);
 
+char* my_getenv(const char* name,char ** env);
 /* external */
 void command_external(char **args, char **env);
 
