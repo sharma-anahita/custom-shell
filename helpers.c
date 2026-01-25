@@ -166,25 +166,37 @@ char *my_strdup(const char *src)
     dest[len] = '\0';
     return dest;
 }
-
-char *find_command_in_path(char *command, char **env)
+char *my_strconcat(char *str1, char *str2)
 {
-    if (!command || !env)
-        return NULL;
 
-    char *path = my_getenv("PATH", env);
-    if (!path)
-        return NULL;
+    int n = my_strLen(str1);
+    int m = my_strLen(str2);
+    char *new1 = malloc(n + m + 1);
+    for (int i = 0; i < n; i++)
+    {
+        new1[i] = str1[i];
+    }
+    for (int i = 0; i < m; i++)
+    {
+        new1[i + n] = str2[i];
+    }
+    new1[m + n] = '\0';
+    return new1;
+}
 
+
+char *find_command(char *path, char *command)
+{
     char *pathcopy = my_strdup(path);
     if (!pathcopy)
         return NULL;
-
+    printf("checked null pathcopy\n");
     char *save = NULL;
     char *dir = my_strtok(pathcopy, PATH_DELIMS, &save);
 
     while (dir)
     {
+        // printf("%s\n",dir);
         char fullpath[MAX_PATH_LENGTH];
 
 #ifdef _WIN32
@@ -192,16 +204,73 @@ char *find_command_in_path(char *command, char **env)
 #else
         snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, command);
 #endif
+        
+// printf("%s\n",fullpath);
 
+#ifdef _WIN32
+        if (_access(fullpath, 0) == 0)
+        {
+            free(pathcopy);
+            printf("found the executable");
+            return my_strdup(fullpath);
+        }
+#else
         if (access(fullpath, X_OK) == 0)
         {
             free(pathcopy);
+            printf("found the executable");
             return my_strdup(fullpath);
         }
+#endif
 
         dir = my_strtok(NULL, PATH_DELIMS, &save);
+        
+    }
+    free(pathcopy);
+    return NULL;
+}
+
+char *find_command_in_path(char *command, char **env)
+{
+    if (!command || !env)
+        return NULL;
+    printf("checked null input\n");
+    char *path = my_getenv("PATH", env);
+    if (!path)
+        return NULL;
+    printf("path is not null\n");
+
+    // find just the string
+    char *ans = find_command(path, command);
+    if (ans)
+        return ans;
+    printf("found the command at no extension checkpoint\n");
+    // find whole executables
+    char *pathext = my_getenv("PATHEXT", env);
+    if(pathext==NULL){
+        return NULL;
+    }
+    printf("nullcheck for pathnext passed\n");
+    // tokenise them
+    char *pathextcpy = my_strdup(pathext);
+    
+    if(pathextcpy==NULL){
+        return NULL;
+    }
+    printf("nullcheck for pathextcpy passed\n");
+
+    char *save = NULL;
+    char *token = my_strtok(pathextcpy, ";", &save);
+    while (token)
+    {
+        char *commandnew = my_strconcat(command, token);
+        printf("%s", commandnew);
+        ans = find_command(path, commandnew);
+        if (ans)
+            return ans;
+        token = my_strtok(NULL, ";", &save);
+        free(commandnew);
     }
 
-    free(pathcopy);
     return NULL;
 }

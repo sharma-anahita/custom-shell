@@ -29,6 +29,7 @@ int my_strcmp(const char *str1, const char *str2);
 int my_strLen(const char *name);
 int my_strncmp(const char *str1, const char *str2, size_t n, bool caseSensitive);
 char *my_strdup(const char *src);
+char* my_strconcat(char* str1,char*str2);
 
 /* builtins */
 void command_cd(char **args, char **inputDirectory,char** env);

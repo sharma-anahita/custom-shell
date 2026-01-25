@@ -98,8 +98,9 @@ void command_which(char **args, char **env)
             }
         }
         if(!found) {
-            printf("this one's a external command, searching in env $PATH");
-            find_command_in_path(args[1],env);
+            printf("this one's a external command, searching in env $PATH\n");
+            char* command = find_command_in_path(args[1],env);
+            printf("%s ",command);
         }
     }
     printf("\n");
