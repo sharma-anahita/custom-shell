@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
-
+#include <ctype.h>
 #define MAX_INPUT_SIZE 1024
 #define MAX_PATH_LENGTH 4096
 char **input_parser(char *input);

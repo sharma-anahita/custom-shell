@@ -101,6 +101,16 @@ void command_echo(char **args,char ** env)
      * This implementation mimics basic POSIX shell `echo` behavior
      * while remaining intentionally simple and readable.
      */
+    /*
+ * Environment variable lookup in Shelly is case-insensitive.
+ *
+ * This is a deliberate design choice to improve usability and to
+ * align better with Windows-style environments, where variables
+ * such as PATH, Path, and path are treated equivalently.
+ *
+ * This behavior differs from traditional POSIX shells.
+ */
+
     bool newLine = true;
     if (args[1] == NULL)
     {
