@@ -2,12 +2,7 @@
 
  
 
-void command_which(char **args, char **env)
-{
-    printf("which not implemented\n");
-}
  
-
 void command_help(char **args)
 {
     printf("help not implemented\n");

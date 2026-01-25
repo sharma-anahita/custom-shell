@@ -64,7 +64,15 @@ void command_pwd(char **args)
     }
 }
 
-void command_which(char **args, char **env);
+void command_which(char **args, char **env){
+    //find the location of the executable
+    if(args[1]==NULL){
+        printf("which [options] [--] COMMAND [...]");
+    }
+    else{
+        
+    }
+}
 
 void command_echo(char **args,char ** env)
 {
