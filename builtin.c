@@ -67,6 +67,8 @@ void command_pwd(char **args)
 char* find_command_in_path(char * command,char** env);
 void command_which(char **args, char **env)
 {
+    //add functionality for options -l specifically 
+    
     (void)env;
     // find the location of the executable
     char *builtins[] = {

@@ -27,14 +27,22 @@ void command_external(char **args, char **env)
     printf("external command not implemented\n");
 }
 
-int my_strcmp(const char *str1, const char *str2)
+char *my_getenv(const char *name, char **env)
 {
-    while (*str1 && (*str1 == *str2))
+    if (name == NULL || env == NULL)
     {
-        str1++;
-        str2++;
+        return NULL;
     }
-    return *(const unsigned char *)str1 - *(const unsigned char *)str2;
+    size_t nameLen = my_strLen(name);
+    for (size_t i = 0; env[i]; i++)
+    {
+        if (my_strncmp(env[i], name, nameLen, false) == 0 && env[i][nameLen] == '=')
+        {
+
+            return &env[i][nameLen + 1];
+        }
+    }
+    return NULL;
 }
 
 void free_tokens(char **tokens)
@@ -56,7 +64,6 @@ int my_strLen(const char *name)
     }
     return len;
 }
-
 int my_strchr(const char *deli, char ch)
 {
     char *st = deli;
@@ -134,23 +141,6 @@ int my_strncmp(const char *str1, const char *str2, size_t n, bool caseSensitive)
         return 0;
     return (unsigned char)str1[i] - (unsigned char)str2[i];
 }
-char *my_getenv(const char *name, char **env)
-{
-    if (name == NULL || env == NULL)
-    {
-        return NULL;
-    }
-    size_t nameLen = my_strLen(name);
-    for (size_t i = 0; env[i]; i++)
-    {
-        if (my_strncmp(env[i], name, nameLen, false) == 0 && env[i][nameLen] == '=')
-        {
-
-            return &env[i][nameLen + 1];
-        }
-    }
-    return NULL;
-}
 char *my_strdup(const char *src)
 {
     if (src == NULL)
@@ -183,7 +173,15 @@ char *my_strconcat(char *str1, char *str2)
     new1[m + n] = '\0';
     return new1;
 }
-
+int my_strcmp(const char *str1, const char *str2)
+{
+    while (*str1 && (*str1 == *str2))
+    {
+        str1++;
+        str2++;
+    }
+    return *(const unsigned char *)str1 - *(const unsigned char *)str2;
+}
 
 char *find_command(char *path, char *command)
 {
