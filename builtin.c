@@ -1,6 +1,6 @@
 #include "shelly.h"
 
-void command_cd(char **args, char **inputDirectory,char** env)
+void command_cd(char **args, char **inputDirectory, char **env)
 {
     // supports cd, cd ~ (home directory), cd <path> , cd ..
     // to handle later : cd -(go to previous directory), permission denied handling
@@ -17,10 +17,10 @@ void command_cd(char **args, char **inputDirectory,char** env)
         if (my_strcmp(args[1], "~") == 0)
         {
             // change to home directory
-            char *path = my_getenv("HOME",env);
+            char *path = my_getenv("HOME", env);
             if (!path)
             {
-                path = my_getenv("USERPROFILE",env); // for Windows compatibility
+                path = my_getenv("USERPROFILE", env); // for Windows compatibility
             }
 
             if (!path)
@@ -49,7 +49,7 @@ void command_cd(char **args, char **inputDirectory,char** env)
 
 void command_pwd(char **args)
 {
-    (void) args;
+    (void)args;
     char *buf = NULL;
     size_t size = 0;
     buf = getcwd(buf, size);
@@ -64,17 +64,49 @@ void command_pwd(char **args)
     }
 }
 
-void command_which(char **args, char **env){
-    //find the location of the executable
-    if(args[1]==NULL){
+char* find_command_in_path(char * command,char** env);
+void command_which(char **args, char **env)
+{
+    (void)env;
+    // find the location of the executable
+    char *builtins[] = {
+        "pwd",
+        "cd",
+        "echo",
+        "env",
+        "help",
+        "setenv",
+        "unset",
+        "which",
+        NULL};
+
+    if (args[1] == NULL)
+    {
         printf("which [options] [--] COMMAND [...]");
     }
-    else{
-        
+    else
+    {
+        //make it a loop for all the commands as args
+        size_t len = my_strLen(args[1]);
+        bool found = false;
+        for (int i = 0; i < 8; i++)
+        {
+            if (my_strncmp(builtins[i], args[1], len, true) == 0)
+            {
+                printf("this one's a built-in command");
+                found = true;
+            }
+        }
+        if(!found) {
+            printf("this one's a external command, searching in env $PATH");
+            find_command_in_path(args[1],env);
+        }
     }
+    printf("\n");
+    return;
 }
 
-void command_echo(char **args,char ** env)
+void command_echo(char **args, char **env)
 {
     /*
      * command_echo
@@ -102,14 +134,14 @@ void command_echo(char **args,char ** env)
      * while remaining intentionally simple and readable.
      */
     /*
- * Environment variable lookup in Shelly is case-insensitive.
- *
- * This is a deliberate design choice to improve usability and to
- * align better with Windows-style environments, where variables
- * such as PATH, Path, and path are treated equivalently.
- *
- * This behavior differs from traditional POSIX shells.
- */
+     * Environment variable lookup in Shelly is case-insensitive.
+     *
+     * This is a deliberate design choice to improve usability and to
+     * align better with Windows-style environments, where variables
+     * such as PATH, Path, and path are treated equivalently.
+     *
+     * This behavior differs from traditional POSIX shells.
+     */
 
     bool newLine = true;
     if (args[1] == NULL)
@@ -131,12 +163,12 @@ void command_echo(char **args,char ** env)
             if (args[i] && args[i][0] == '$')
             {
                 char *variable = args[i] + 1;
-                
-                char *value = my_getenv(variable,env);
+
+                char *value = my_getenv(variable, env);
 
                 if (!value && my_strcmp(variable, "HOME") == 0)
                 {
-                    value = my_getenv("USERPROFILE",env);
+                    value = my_getenv("USERPROFILE", env);
                 }
                 if (value)
                 {
@@ -148,14 +180,13 @@ void command_echo(char **args,char ** env)
                 }
             }
             else
-            { 
-                    printf("%s", args[i]);
-                    
-                    if (args[i+1] != NULL)
-                    {
-                        printf(" ");
-                    }
-                
+            {
+                printf("%s", args[i]);
+
+                if (args[i + 1] != NULL)
+                {
+                    printf(" ");
+                }
             }
         }
     }
@@ -172,13 +203,14 @@ void command_echo(char **args,char ** env)
     return;
 }
 
-
 void command_help(char **args);
-void command_env(char **args, char **env){
-    //implment version with arguments too
+void command_env(char **args, char **env)
+{
+    // implment version with arguments too
     (void)args;
-    for(size_t i = 0;env[i];i++){
-        printf("%s",env[i]);
+    for (size_t i = 0; env[i]; i++)
+    {
+        printf("%s", env[i]);
         printf("\n");
     }
 }

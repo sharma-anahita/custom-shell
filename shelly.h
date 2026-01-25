@@ -1,5 +1,17 @@
 #ifndef SHELLY_H
 #define SHELLY_H
+#ifdef _WIN32
+#define PATH_DELIMS ";"
+#else
+#define PATH_DELIMS ":"
+#endif
+
+// for increasing portability
+#ifdef _WIN32
+#include <direct.h>   // _chdir, _getcwd
+#else
+#include <unistd.h>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +24,11 @@
 char **input_parser(char *input);
 void free_tokens(char **tokens);
 
+// string functions
 int my_strcmp(const char *str1, const char *str2);
+int my_strLen(const char *name);
+int my_strncmp(const char *str1, const char *str2, size_t n, bool caseSensitive);
+char *my_strdup(const char *src);
 
 /* builtins */
 void command_cd(char **args, char **inputDirectory,char** env);

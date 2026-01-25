@@ -1,15 +1,10 @@
-#include "shelly.h" 
+#include "shelly.h"
 
- 
-
- 
 void command_help(char **args)
 {
     (void)args;
     printf("help not implemented\n");
 }
-
- 
 
 void command_set(char **args, char **env)
 {
@@ -32,56 +27,181 @@ void command_external(char **args, char **env)
     printf("external command not implemented\n");
 }
 
-int my_strcmp(const char* str1, const char* str2){
-    while(*str1 && (*str1==*str2)){
+int my_strcmp(const char *str1, const char *str2)
+{
+    while (*str1 && (*str1 == *str2))
+    {
         str1++;
         str2++;
     }
-    return *(const unsigned char*)str1 - *(const unsigned char*)str2;
-    
+    return *(const unsigned char *)str1 - *(const unsigned char *)str2;
 }
 
 void free_tokens(char **tokens)
 {
-    for (int i = 0; tokens[i]; i++) {
+    for (int i = 0; tokens[i]; i++)
+    {
         free(tokens[i]);
     }
     free(tokens);
 }
-int my_strLen(const char* name){
+
+int my_strLen(const char *name)
+{
     int len = 0;
-    while(*name){
+    while (*name)
+    {
         name++;
         len++;
     }
     return len;
 }
-int my_strncmp(const char* str1,const char* str2,size_t n){
-    int i =0;  
-    while(i<n && str1[i] && str2[i]){
+
+int my_strchr(const char *deli, char ch)
+{
+    char *st = deli;
+    while (*st)
+    {
+        if (*st == ch)
+            return 1;
+        st++;
+    }
+    return 0;
+}
+char *my_strtok(char *path, const char *deli, char **save)
+{
+    if (path)
+    {
+        *save = path;
+    }
+    if (*save == NULL)
+    {
+        return NULL;
+    }
+    char *start = *save;
+
+    while (*start && my_strchr(deli, *start))
+        start++;
+
+    if (*start == '\0')
+    {
+        *save = NULL;
+        return NULL;
+    }
+
+    char *end = start;
+    while (*end && my_strchr(deli, *end) == 0)
+        end++;
+
+    // start.....end -> file path
+
+    if (*end)
+    {
+        *end = '\0';
+        *save = end + 1;
+    }
+    else
+    {
+        *save = NULL;
+    }
+    return start;
+}
+int my_strncmp(const char *str1, const char *str2, size_t n, bool caseSensitive)
+{
+    int i = 0;
+    while (i < n && str1[i] && str2[i])
+    {
         char ch1 = str1[i];
         char ch2 = str2[i];
-        if(tolower(ch1)!=tolower(ch2)){
-            return (unsigned char)str1[i] - (unsigned char)str2[i];
-        } 
+        if (caseSensitive)
+        {
+            if (ch1 != ch2)
+            {
+                return (unsigned char)str1[i] - (unsigned char)str2[i];
+            }
+        }
+        else
+        {
+            if (tolower(ch1) != tolower(ch2))
+            {
+                return (unsigned char)str1[i] - (unsigned char)str2[i];
+            }
+        }
+
         i++;
-        
-    }   
-    if(i==n) return 0;
-    return (unsigned char)str1 - (unsigned char)str2;
-}   
-char* my_getenv(const char* name,char ** env){
-    if(name==NULL || env==NULL){
+    }
+    if (i == n)
+        return 0;
+    return (unsigned char)str1[i] - (unsigned char)str2[i];
+}
+char *my_getenv(const char *name, char **env)
+{
+    if (name == NULL || env == NULL)
+    {
         return NULL;
-        
     }
     size_t nameLen = my_strLen(name);
     for (size_t i = 0; env[i]; i++)
-    { 
-        if(my_strncmp(env[i],name,nameLen)==0 && env[i][nameLen]=='='){
-           
-            return &env[i][nameLen+1];
+    {
+        if (my_strncmp(env[i], name, nameLen, false) == 0 && env[i][nameLen] == '=')
+        {
+
+            return &env[i][nameLen + 1];
         }
     }
+    return NULL;
+}
+char *my_strdup(const char *src)
+{
+    if (src == NULL)
+        return NULL;
+    size_t len = my_strLen(src);
+    char *dest = malloc(len + 1);
+    if (dest == NULL)
+        return NULL;
+    for (int i = 0; i < len; i++)
+    {
+        dest[i] = src[i];
+    }
+    dest[len] = '\0';
+    return dest;
+}
+
+char *find_command_in_path(char *command, char **env)
+{
+    if (!command || !env)
+        return NULL;
+
+    char *path = my_getenv("PATH", env);
+    if (!path)
+        return NULL;
+
+    char *pathcopy = my_strdup(path);
+    if (!pathcopy)
+        return NULL;
+
+    char *save = NULL;
+    char *dir = my_strtok(pathcopy, PATH_DELIMS, &save);
+
+    while (dir)
+    {
+        char fullpath[MAX_PATH_LENGTH];
+
+#ifdef _WIN32
+        snprintf(fullpath, sizeof(fullpath), "%s\\%s", dir, command);
+#else
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", dir, command);
+#endif
+
+        if (access(fullpath, X_OK) == 0)
+        {
+            free(pathcopy);
+            return my_strdup(fullpath);
+        }
+
+        dir = my_strtok(NULL, PATH_DELIMS, &save);
+    }
+
+    free(pathcopy);
     return NULL;
 }
