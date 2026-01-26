@@ -166,7 +166,3 @@ The shell uses preprocessor directives to handle platform differences:
  
  
  
-
----
-
-**Note**: This is an educational project and not intended for production use. For a full-featured shell, please use established shells like bash, zsh, or fish.
