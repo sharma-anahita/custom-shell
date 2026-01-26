@@ -26,7 +26,7 @@ A lightweight, cross-platform shell implementation written in C that provides ba
 
 ### Clone the Repository
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/sharma-anahita/custom-shell
 cd custom-shell
 ```
 
@@ -127,44 +127,7 @@ custom-shell/
 ├── README.md           # This file
 └── .gitignore          # Git ignore rules
 ```
-
-## 🔧 Architecture
-
-### Core Components
-
-1. **Main Loop** (`main.c`)
-   - Displays prompt with current directory
-   - Reads user input
-   - Parses commands
-   - Executes built-in or external commands
-
-2. **Input Parser** (`input_parser.c`)
-   - Tokenizes input into command and arguments
-   - Handles whitespace separation
-   - Returns NULL-terminated array of strings
-
-3. **Built-in Commands** (`builtin.c`)
-   - Implements shell built-in commands
-   - Handles environment variable operations
-   - Manages directory navigation
-
-4. **Helper Functions** (`helpers.c`)
-   - Custom string manipulation functions
-   - PATH searching and command resolution
-   - Cross-platform compatibility utilities
-
-## 🔍 Technical Details
-
-### Custom String Functions
-To avoid standard library dependencies, the shell implements its own string functions:
-- `my_strcmp()` - String comparison
-- `my_strncmp()` - String comparison with length limit and case-sensitivity option
-- `my_strLen()` - String length calculation
-- `my_strdup()` - String duplication
-- `my_strconcat()` - String concatenation
-- `my_strtok()` - String tokenization
-- `my_getenv()` - Case-insensitive environment variable lookup
-
+ 
 ### Cross-Platform Compatibility
 The shell uses preprocessor directives to handle platform differences:
 ```c
@@ -199,50 +162,10 @@ The shell uses preprocessor directives to handle platform differences:
 - [ ] Better cross-platform testing
 - [ ] Configuration file support
 
-## 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow the existing code style
-- Add comments for complex logic
-- Test on both Windows and Unix systems when possible
-- Update documentation for new features
-
-## 📝 License
-
-This project is open source and available under the [MIT License](LICENSE).
-
-## 👨‍💻 Author
-
-Created as a learning project to understand shell implementation and system programming in C.
-
-## 🙏 Acknowledgments
-
-- Inspired by Unix shells (bash, sh, zsh)
-- Built as an educational project to learn:
-  - System calls and process management
-  - String manipulation in C
-  - Cross-platform development
-  - Build systems (Make)
-
-## 📚 Resources
-
-- [GNU C Library Documentation](https://www.gnu.org/software/libc/manual/)
-- [POSIX Standards](https://pubs.opengroup.org/onlinepubs/9699919799/)
-- [Advanced Programming in the UNIX Environment](https://www.apuebook.com/)
-
-## 🔗 Links
-
-- Repository: `<your-repository-url>`
-- Issue Tracker: `<your-repository-url>/issues`
-- Documentation: `<your-repository-url>/wiki`
+ 
+ 
+ 
+ 
 
 ---
 
