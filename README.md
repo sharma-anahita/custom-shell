@@ -148,6 +148,7 @@ The shell uses preprocessor directives to handle platform differences:
 - **Quoting**: Limited quote handling in input parser
 - **cd -**: Previous directory navigation not implemented
 - **Tab Completion**: Not available
+-bug in set env based on input variations
 
 ## 🚧 Planned Features
 

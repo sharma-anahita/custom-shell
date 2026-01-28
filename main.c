@@ -16,7 +16,7 @@
 // and error handling will also be done
 // we will first have to create a loop that will keep on running until the user wants to exit
 
-int shell_builtin_execute(char **args, char **env, char **inputDirectory)
+int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
 {
     // this function will execute the inbuilt commands
     // cd, pwd,whihch, echo,exit,help,env,set,unset,etc
@@ -24,7 +24,7 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
     if (my_strcmp(args[0], "cd") == 0)
     {
         printf("you called cd\n");
-        command_cd(args, inputDirectory,env);
+        command_cd(args, inputDirectory,*env);
     }
     else if (my_strcmp(args[0], "pwd") == 0)
     {
@@ -32,11 +32,11 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "which") == 0)
     {
-        command_which(args, env);
+        command_which(args, *env);
     }
     else if (my_strcmp(args[0], "echo") == 0)
     {
-        command_echo(args,env);
+        command_echo(args,*env);
     }
     else if (my_strcmp(args[0], "help") == 0)
     {
@@ -49,19 +49,23 @@ int shell_builtin_execute(char **args, char **env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "env") == 0)
     {
-        command_env(args, env);
+        command_env(args, *env);
     }
     else if (my_strcmp(args[0], "set") == 0)
     {
-        command_set(args, env);
+        char** newenv = command_set(args, env);
+        if(newenv){
+            free(*env);
+            *env = newenv;
+        }
     }
     else if (my_strcmp(args[0], "unset") == 0)
     {
-        command_unset(args, env);
+        command_unset(args, *env);
     }
     else
     {
-        command_external(args, env);
+        command_external(args, *env);
     }
 
     return 0;
@@ -91,7 +95,7 @@ void shell_loop(char **env)
             continue;
         }
 
-        shell_builtin_execute(args, env, &inputDirectory);
+        shell_builtin_execute(args, &env, &inputDirectory);
         free_tokens(args);
     }
 

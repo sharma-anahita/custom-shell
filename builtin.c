@@ -64,11 +64,11 @@ void command_pwd(char **args)
     }
 }
 
-char* find_command_in_path(char * command,char** env);
+char *find_command_in_path(char *command, char **env);
 void command_which(char **args, char **env)
 {
-    //add functionality for options -l specifically 
-    
+    // add functionality for options -l specifically
+
     (void)env;
     // find the location of the executable
     char *builtins[] = {
@@ -88,7 +88,7 @@ void command_which(char **args, char **env)
     }
     else
     {
-        //make it a loop for all the commands as args
+        // make it a loop for all the commands as args
         size_t len = my_strLen(args[1]);
         bool found = false;
         for (int i = 0; i < 8; i++)
@@ -99,10 +99,11 @@ void command_which(char **args, char **env)
                 found = true;
             }
         }
-        if(!found) {
+        if (!found)
+        {
             printf("this one's a external command, searching in env $PATH\n");
-            char* command = find_command_in_path(args[1],env);
-            printf("%s ",command);
+            char *command = find_command_in_path(args[1], env);
+            printf("%s ", command);
         }
     }
     printf("\n");
@@ -206,7 +207,18 @@ void command_echo(char **args, char **env)
     return;
 }
 
-void command_help(char **args);
+void command_help(char **args)
+{
+    (void)args;
+    printf("HI");
+}
+int env_len(char **env)
+{
+    int i = 0;
+    while (env[i])
+        i++;
+    return i;
+}
 void command_env(char **args, char **env)
 {
     // implment version with arguments too
@@ -217,5 +229,101 @@ void command_env(char **args, char **env)
         printf("\n");
     }
 }
-void command_set(char **args, char **env);
+static int key_len(const char *s)
+{
+    int i = 0;
+    while (s[i] && s[i] != '=')
+        i++;
+    return i;
+}
+char **command_set(char **args, char ***env)
+{
+    int envc = env_len(*env);
+    int found = 0;
+
+    // allocate space: old env + possible new var + NULL
+    char **newenv = malloc(sizeof(char *) * (envc + 2));
+    if (!newenv)
+    {
+        perror("malloc");
+        return NULL;
+    }
+
+    // deep copy env
+    for (int i = 0; i < envc; i++)
+    {
+        newenv[i] = my_strdup((*env)[i]);
+        if (!newenv[i])
+        {
+            perror("strdup");
+            return NULL;
+        }
+    }
+    newenv[envc] = NULL;
+
+    // no variable provided
+    if (args[1] == NULL)
+        return newenv;
+
+    int keylen = key_len(args[1]);
+
+    // search and update
+    for (int i = 0; i < envc; i++)
+    {
+        if (strncmp(newenv[i], args[1], keylen) == 0 &&
+            newenv[i][keylen] == '=')
+        {
+            free(newenv[i]);
+
+            // case: VAR=value
+            if (args[2] == NULL)
+            {
+                newenv[i] = my_strdup(args[1]);
+            }
+            // case: VAR value
+            else
+            {
+                int varlen = my_strLen(args[1]);
+                int vallen = my_strLen(args[2]);
+
+                newenv[i] = malloc(varlen + vallen + 2);
+                if (!newenv[i])
+                {
+                    perror("malloc");
+                    return NULL;
+                }
+
+                snprintf(newenv[i], varlen + vallen + 2,
+                         "%s=%s", args[1], args[2]);
+            }
+
+            found = 1;
+            break;
+        }
+    }
+
+    // not found → append new variable (only if value exists)
+    if (!found && args[2] != NULL)
+    {
+        int varlen = my_strLen(args[1]);
+        int vallen = my_strLen(args[2]);
+
+        newenv[envc] = malloc(varlen + vallen + 2);
+        if (!newenv[envc])
+        {
+            perror("malloc");
+            return NULL;
+        }
+
+        snprintf(newenv[envc], varlen + vallen + 2,
+                 "%s=%s", args[1], args[2]);
+
+        newenv[envc + 1] = NULL;
+    }
+
+    return newenv;
+}
+
+
+
 void command_unset(char **args, char **env);

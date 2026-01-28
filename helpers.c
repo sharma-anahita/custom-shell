@@ -1,17 +1,7 @@
 #include "shelly.h"
 
-void command_help(char **args)
-{
-    (void)args;
-    printf("help not implemented\n");
-}
 
-void command_set(char **args, char **env)
-{
-    (void)args;
-    (void)env;
-    printf("set not implemented\n");
-}
+ 
 
 void command_unset(char **args, char **env)
 {
