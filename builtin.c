@@ -334,7 +334,6 @@ int findInSet(char* set[],char* key,int keyLen){
     return 0;
 }
 char** command_unset(char **args, char ***env){
-    printf("yo entered\n");
     int env_Len = env_len(*env);
     char** newenv = malloc((env_Len+1)*sizeof(char*));
     //try to fin the variable
@@ -356,8 +355,7 @@ char** command_unset(char **args, char ***env){
     char* set[count];
     int indx=0;
     while(args[indx+1]){
-        set[indx] = args[indx+1];
-        printf("%s\n",set[indx]);
+        set[indx] = args[indx+1]; 
         indx++;
     }
     set[indx]= NULL;
@@ -369,8 +367,7 @@ char** command_unset(char **args, char ***env){
         int keyLen = key_len((*env)[i]);
         if(findInSet(set,(*env)[i],keyLen)==0){
             
-            newenv[newenvIndx] = my_strdup((*env)[i]); 
-            printf("%s\n",newenv[newenvIndx]);
+            newenv[newenvIndx] = my_strdup((*env)[i]);  
             newenvIndx++;
         } 
         free((*env)[i]);
