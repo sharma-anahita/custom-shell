@@ -61,7 +61,14 @@ int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "unset") == 0)
     {
-        command_unset(args, *env);
+        char** newenv = command_unset(args, env);
+        if(newenv){
+            free(*env);
+            *env = newenv;
+        }
+        else{
+            perror("newenv not allocated");
+        }
     }
     else
     {

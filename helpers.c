@@ -1,15 +1,5 @@
 #include "shelly.h"
 
-
- 
-
-void command_unset(char **args, char **env)
-{
-    (void)args;
-    (void)env;
-    printf("unset not implemented\n");
-}
-
 void command_external(char **args, char **env)
 {
     (void)args;

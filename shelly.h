@@ -41,7 +41,7 @@ void command_echo(char **args,char** env);
 void command_help(char **args);
 void command_env(char **args, char **env);
 char** command_set(char **args, char ***env);
-void command_unset(char **args, char **env);
+char** command_unset(char **args, char ***env);
 
 char* my_getenv(const char* name,char ** env);
 /* external */

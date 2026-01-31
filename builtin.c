@@ -325,5 +325,57 @@ char **command_set(char **args, char ***env)
 }
 
 
-
-void command_unset(char **args, char **env);
+int findInSet(char* set[],char* key,int keyLen){
+    int indx = 0;
+    while(set[indx]){
+        if(my_strncmp(key,set[indx],keyLen,false)==0 && (key[keyLen]=='=') && set[indx][keyLen]=='\0') return 1;
+        indx+=1;
+    }
+    return 0;
+}
+char** command_unset(char **args, char ***env){
+    printf("yo entered\n");
+    int env_Len = env_len(*env);
+    char** newenv = malloc((env_Len+1)*sizeof(char*));
+    //try to fin the variable
+    //if found remove it 
+    //add all others into the newenv, except this one
+    if(!newenv){
+        perror("could'nt allocate newenv inside unset command\n");
+        return NULL;
+    }
+    if(!args[1]){
+        printf("No arguments given to unset_env function\n");
+        return NULL;
+    }
+    int count = 0;
+    while(args[count]){
+        count++;
+    }
+    
+    char* set[count];
+    int indx=0;
+    while(args[indx+1]){
+        set[indx] = args[indx+1];
+        printf("%s\n",set[indx]);
+        indx++;
+    }
+    set[indx]= NULL;
+    //set has all args
+    int newenvIndx = 0;
+    for (int i = 0; i < env_Len; i++)
+    {
+        //see if this one is to be deleted
+        int keyLen = key_len((*env)[i]);
+        if(findInSet(set,(*env)[i],keyLen)==0){
+            
+            newenv[newenvIndx] = my_strdup((*env)[i]); 
+            printf("%s\n",newenv[newenvIndx]);
+            newenvIndx++;
+        } 
+        free((*env)[i]);
+    }
+    
+    newenv[newenvIndx]=NULL;
+    return newenv;
+}
