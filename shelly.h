@@ -46,5 +46,6 @@ char** command_unset(char **args, char ***env);
 char* my_getenv(const char* name,char ** env);
 /* external */
 void command_external(char **args, char **env);
+char *find_command_in_path(char *command, char **env);
 
 #endif

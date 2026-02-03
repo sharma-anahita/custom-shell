@@ -1,12 +1,5 @@
 #include "shelly.h"
 
-void command_external(char **args, char **env)
-{
-    (void)args;
-    (void)env;
-    printf("external command not implemented\n");
-}
-
 char *my_getenv(const char *name, char **env)
 {
     if (name == NULL || env == NULL)
@@ -211,31 +204,26 @@ char *find_command(char *path, char *command)
 char *find_command_in_path(char *command, char **env)
 {
     if (!command || !env)
-        return NULL;
-    printf("checked null input\n");
+        return NULL; 
     char *path = my_getenv("PATH", env);
     if (!path)
-        return NULL;
-    printf("path is not null\n");
+        return NULL; 
 
     // find just the string
     char *ans = find_command(path, command);
     if (ans)
-        return ans;
-    printf("found the command at no extension checkpoint\n");
+        return ans; 
     // find whole executables
     char *pathext = my_getenv("PATHEXT", env);
     if(pathext==NULL){
         return NULL;
-    }
-    printf("nullcheck for pathnext passed\n");
+    } 
     // tokenise them
     char *pathextcpy = my_strdup(pathext);
     
     if(pathextcpy==NULL){
         return NULL;
-    }
-    printf("nullcheck for pathextcpy passed\n");
+    } 
 
     char *save = NULL;
     char *token = my_strtok(pathextcpy, ";", &save);
