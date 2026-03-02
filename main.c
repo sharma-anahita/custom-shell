@@ -20,7 +20,6 @@ int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
 {
     // this function will execute the inbuilt commands
     // cd, pwd,whihch, echo,exit,help,env,set,unset,etc
-    printf("Executing built in command: %s\n", args[0]);
     if (my_strcmp(args[0], "cd") == 0)
     {
         printf("you called cd\n");

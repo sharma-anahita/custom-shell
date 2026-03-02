@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c11
 
 TARGET = main.exe
-OBJS = main.o helpers.o input_parser.o builtin.o
+OBJS = main.o helpers.o input_parser.o builtin.o externals.o
 
 all: $(TARGET)
 
@@ -20,6 +20,9 @@ input_parser.o: input_parser.c shelly.h
 
 builtin.o: builtin.c shelly.h
 	$(CC) $(CFLAGS) -c builtin.c
+
+externals.o: externals.c shelly.h
+	$(CC) $(CFLAGS) -c externals.c
 
 clean:
 	rm -f *.o $(TARGET)
