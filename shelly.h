@@ -6,6 +6,20 @@
 #define PATH_DELIMS ":"
 #endif
 
+typedef enum {
+    TOKEN_WORD,
+    TOKEN_PIPE,
+    TOKEN_REDIRECT_OUT,      // >
+    TOKEN_REDIRECT_APPEND,   // >>
+    TOKEN_REDIRECT_IN,       // <
+    TOKEN_REDIRECT_ERR       // 2>
+} TokenType;
+
+typedef struct {
+    TokenType type;
+    char *value;   // Only used for WORD
+} Token;
+
 // for increasing portability
 #ifdef _WIN32
 #include <direct.h>   // _chdir, _getcwd
