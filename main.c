@@ -1,64 +1,73 @@
-#define _GNU_SOURCE
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-
 #include "shelly.h"
 
-/* ─────────────────────────────────────────────
- *  Execute a single built-in or external command.
- *  Redirections on a single command are handled
- *  by command_external → apply_redirections.
- *  Built-ins get redirections applied in the
- *  parent process directly (simple open/dup2).
- * ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+ *  Redirection helpers for built-in commands.
+ *
+ *  Built-ins run in the PARENT process, so we must save/restore
+ *  the real stdin/stdout/stderr around them.
+ *
+ *  On Windows we use the CRT fd layer (_dup / _dup2) which sits
+ *  on top of Win32 HANDLEs and is consistent with _open/fopen.
+ * ═══════════════════════════════════════════════════════════════ */
+
+#ifdef _WIN32
+    #define SH_DUP(fd)          _dup(fd)
+    #define SH_DUP2(src, dst)   _dup2((src), (dst))
+    #define SH_CLOSE(fd)        _close(fd)
+    #define SH_OPEN3(p, f, m)   _open((p), (f) | _O_BINARY, (m))
+#else
+    #define SH_DUP(fd)          dup(fd)
+    #define SH_DUP2(src, dst)   dup2((src), (dst))
+    #define SH_CLOSE(fd)        close(fd)
+    #define SH_OPEN3(p, f, m)   open((p), (f), (m))
+#endif
+
 static void apply_redirections_parent(Command *cmd,
                                       int *saved_in,
                                       int *saved_out,
                                       int *saved_err)
 {
-    /* save originals so we can restore after built-in runs */
-    *saved_in  = dup(STDIN_FILENO);
-    *saved_out = dup(STDOUT_FILENO);
-    *saved_err = dup(STDERR_FILENO);
+    *saved_in  = SH_DUP(STDIN_FILENO);
+    *saved_out = SH_DUP(STDOUT_FILENO);
+    *saved_err = SH_DUP(STDERR_FILENO);
 
     if (cmd->redirect_in)
     {
-        int fd = open(cmd->redirect_in, O_RDONLY);
+        int fd = SH_OPEN3(cmd->redirect_in, O_RDONLY, 0);
         if (fd < 0) perror(cmd->redirect_in);
-        else { dup2(fd, STDIN_FILENO); close(fd); }
+        else { SH_DUP2(fd, STDIN_FILENO);  SH_CLOSE(fd); }
     }
     if (cmd->redirect_out)
     {
         int flags = O_WRONLY | O_CREAT | (cmd->append ? O_APPEND : O_TRUNC);
-        int fd    = open(cmd->redirect_out, flags, 0644);
+        int fd    = SH_OPEN3(cmd->redirect_out, flags, 0644);
         if (fd < 0) perror(cmd->redirect_out);
-        else { dup2(fd, STDOUT_FILENO); close(fd); }
+        else { SH_DUP2(fd, STDOUT_FILENO); SH_CLOSE(fd); }
     }
     if (cmd->redirect_err)
     {
-        int fd = open(cmd->redirect_err, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        int fd = SH_OPEN3(cmd->redirect_err, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) perror(cmd->redirect_err);
-        else { dup2(fd, STDERR_FILENO); close(fd); }
+        else { SH_DUP2(fd, STDERR_FILENO); SH_CLOSE(fd); }
     }
 }
 
 static void restore_std_fds(int saved_in, int saved_out, int saved_err)
 {
-    dup2(saved_in,  STDIN_FILENO);  close(saved_in);
-    dup2(saved_out, STDOUT_FILENO); close(saved_out);
-    dup2(saved_err, STDERR_FILENO); close(saved_err);
+    SH_DUP2(saved_in,  STDIN_FILENO);  SH_CLOSE(saved_in);
+    SH_DUP2(saved_out, STDOUT_FILENO); SH_CLOSE(saved_out);
+    SH_DUP2(saved_err, STDERR_FILENO); SH_CLOSE(saved_err);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ *  Dispatch a single command (built-in or external).
+ * ═══════════════════════════════════════════════════════════════ */
 int shell_builtin_execute(Command *cmd, char ***env, char **inputDirectory)
 {
     char **args = cmd->args;
 
-    /* apply redirections in the parent for built-ins */
-    int sin, sout, serr;
-    apply_redirections_parent(cmd, &sin, &sout, &serr);
+    int sin_fd, sout_fd, serr_fd;
+    apply_redirections_parent(cmd, &sin_fd, &sout_fd, &serr_fd);
 
     if (my_strcmp(args[0], "cd") == 0)
     {
@@ -102,20 +111,20 @@ int shell_builtin_execute(Command *cmd, char ***env, char **inputDirectory)
     }
     else
     {
-        /* external single command — restore fds first,
-           externals.c handles its own redirections in the child */
-        restore_std_fds(sin, sout, serr);
+        /* External: restore fds first — externals.c opens its own
+           redirections inside the child process / CreateProcess */
+        restore_std_fds(sin_fd, sout_fd, serr_fd); 
         command_external(args, *env);
         return 0;
     }
 
-    restore_std_fds(sin, sout, serr);
+    restore_std_fds(sin_fd, sout_fd, serr_fd);
     return 0;
 }
 
-/* ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════
  *  Main shell loop
- * ───────────────────────────────────────────── */
+ * ═══════════════════════════════════════════════════════════════ */
 #define INPUT_BUFSIZE 1024
 
 void shell_loop(char **env)
@@ -131,41 +140,39 @@ void shell_loop(char **env)
         if (!fgets(input, sizeof(input), stdin))
         {
             printf("\n");
-            break; /* EOF: Ctrl+D / Ctrl+Z */
+            break; /* EOF: Ctrl+D on Unix, Ctrl+Z on Windows */
         }
 
-        /* ── lex ── */
+        /* strip trailing newline / \r\n (Windows fgets includes \r) */
+        int len = my_strLen(input);
+        while (len > 0 && (input[len-1] == '\n' || input[len-1] == '\r'))
+        {
+            input[--len] = '\0';
+        }
+
+        /* lex */
         int    token_count = 0;
-        Token *tokens      = tokenize(input, &token_count); /* BUG FIX: & */
+        Token *tokens      = tokenize(input, &token_count);
         if (!tokens) { perror("tokenize"); exit(EXIT_FAILURE); }
 
-        /* ── parse ── */
+        /* parse */
         int      cmd_count = 0;
         Command *commands  = parse_commands(tokens, token_count, &cmd_count);
         free_tokens_new(tokens, token_count);
 
         if (!commands) { perror("parse_commands"); exit(EXIT_FAILURE); }
 
-        /* skip empty input */
         if (cmd_count == 0 || commands[0].args[0] == NULL)
         {
             free_commands(commands, cmd_count);
             continue;
         }
 
-        /* ── dispatch ── */
+        /* dispatch */
         if (cmd_count == 1)
-        {
-            /* single command — may have redirections but no pipes */
             shell_builtin_execute(&commands[0], &env, &inputDirectory);
-        }
         else
-        {
-            /* pipeline: built-ins inside a pipeline run in a child,
-               so their env/dir changes won't affect the parent shell —
-               that's standard shell behaviour. */
             execute_pipeline(commands, cmd_count, env);
-        }
 
         free_commands(commands, cmd_count);
     }
@@ -173,11 +180,21 @@ void shell_loop(char **env)
     free(inputDirectory);
 }
 
+/* ═══════════════════════════════════════════════════════════════
+ *  Entry point
+ *
+ *  POSIX:   main(int, char**, char**)  -- third arg is envp
+ *  Windows: envp is also supported by MinGW/MSVC as an extension
+ * ═══════════════════════════════════════════════════════════════ */
 int main(int argc, char **argv, char **env)
 {
-    setvbuf(stdout, NULL, _IOLBF, 0);
     (void)argc;
     (void)argv;
+
+    /* line-buffered stdout on both platforms */
+    setvbuf(stdout, NULL, _IOLBF, 0);
+
     printf("Welcome to this simple shell!\n");
     shell_loop(env);
+    return 0;
 }

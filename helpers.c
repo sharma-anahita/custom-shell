@@ -17,7 +17,6 @@ char *my_getenv(const char *name, char **env)
     }
     return NULL;
 }
-
 void free_tokens(char **tokens)
 {
     for (int i = 0; tokens[i]; i++)
@@ -26,7 +25,6 @@ void free_tokens(char **tokens)
     }
     free(tokens);
 }
-
 int my_strLen(const char *name)
 {
     int len = 0;
@@ -161,7 +159,7 @@ char *find_command(char *path, char *command)
     char *pathcopy = my_strdup(path);
     if (!pathcopy)
         return NULL;
-    printf("checked null pathcopy\n");
+    // printf("checked null pathcopy\n");
     char *save = NULL;
     char *dir = my_strtok(pathcopy, PATH_DELIMS, &save);
 
@@ -182,14 +180,14 @@ char *find_command(char *path, char *command)
         if (_access(fullpath, 0) == 0)
         {
             free(pathcopy);
-            printf("found the executable");
+            // printf("found the executable");
             return my_strdup(fullpath);
         }
 #else
         if (access(fullpath, X_OK) == 0)
         {
             free(pathcopy);
-            printf("found the executable");
+            // printf("found the executable");
             return my_strdup(fullpath);
         }
 #endif
@@ -230,7 +228,7 @@ char *find_command_in_path(char *command, char **env)
     while (token)
     {
         char *commandnew = my_strconcat(command, token);
-        printf("%s", commandnew);
+
         ans = find_command(path, commandnew);
         if (ans)
             return ans;
