@@ -1,106 +1,225 @@
-
 #include "shelly.h"
-#ifdef _WIN32
-#include <windows.h>
-#else
 #include <sys/wait.h>
-#include <unistd.h>
+#include <fcntl.h>
+
+/* ─────────────────────────────────────────────
+ *  strsignal forward declaration (POSIX)
+ * ───────────────────────────────────────────── */
+#ifndef _GNU_SOURCE
+const char *strsignal(int sig);
 #endif
 
-//this is where we'll execute the external commands
+/* ─────────────────────────────────────────────
+ *  Report how a child process exited
+ * ───────────────────────────────────────────── */
+static void report_status(int status)
+{
+    if (WIFEXITED(status))
+    {
+        int code = WEXITSTATUS(status);
+        if (code != 0)
+            fprintf(stderr, "shelly: process exited with status %d\n", code);
+    }
+    else if (WIFSIGNALED(status))
+    {
+        int sig = WTERMSIG(status);
+        fprintf(stderr, "shelly: killed by signal %d (%s)%s\n",
+                sig, strsignal(sig),
+                WCOREDUMP(status) ? " (core dumped)" : "");
+    }
+    else if (WIFSTOPPED(status))
+    {
+        int sig = WSTOPSIG(status);
+        fprintf(stderr, "shelly: stopped by signal %d (%s)\n",
+                sig, strsignal(sig));
+    }
+}
 
-//we'll have to create a new process for them
-//will return something to tell if it was sucessfull or not
- 
-
-void command_external(char **args, char **env) {
-#ifdef _WIN32
-    // Windows implementation using CreateProcess
-    STARTUPINFO si;
-    PROCESS_INFORMATION pi;
-    ZeroMemory(&si, sizeof(si));
-    si.cb = sizeof(si);
-    ZeroMemory(&pi, sizeof(pi));
-
-    // Build command line string
-    char *cmdline = my_strdup("");
-
-    for (int i = 0; args[i] != NULL; i++) {
-        char *tmp = my_strconcat(cmdline, args[i]);
-        free(cmdline);
-        cmdline = tmp;
-
-        tmp = my_strconcat(cmdline, " ");
-        free(cmdline);
-        cmdline = tmp;
+/* ─────────────────────────────────────────────
+ *  Apply redirections inside a child process.
+ *  Returns 0 on success, -1 on error.
+ * ───────────────────────────────────────────── */
+static int apply_redirections(Command *cmd)
+{
+    if (cmd->redirect_in)
+    {
+        int fd = open(cmd->redirect_in, O_RDONLY);
+        if (fd < 0) { perror(cmd->redirect_in); return -1; }
+        if (dup2(fd, STDIN_FILENO) < 0)  { perror("dup2 stdin");  return -1; }
+        close(fd);
     }
 
-    // Remove trailing space
-    size_t len = my_strLen(cmdline);
-    if (len > 0 && cmdline[len - 1] == ' ') {
-        cmdline[len - 1] = '\0';
+    if (cmd->redirect_out)
+    {
+        int flags = O_WRONLY | O_CREAT | (cmd->append ? O_APPEND : O_TRUNC);
+        int fd    = open(cmd->redirect_out, flags, 0644);
+        if (fd < 0) { perror(cmd->redirect_out); return -1; }
+        if (dup2(fd, STDOUT_FILENO) < 0) { perror("dup2 stdout"); return -1; }
+        close(fd);
     }
 
-    if (!CreateProcessA(
-            NULL,           // No module name (use command line)
-            cmdline,        // Command line
-            NULL,           // Process handle not inheritable
-            NULL,           // Thread handle not inheritable
-            FALSE,          // Set handle inheritance to FALSE
-            0,              // No creation flags
-            NULL,           // Use parent's environment block
-            NULL,           // Use parent's starting directory 
-            &si,            // Pointer to STARTUPINFO structure
-            &pi)            // Pointer to PROCESS_INFORMATION structure
-        ) {
-        printf("CreateProcess failed (%lu).\n", GetLastError());
+    if (cmd->redirect_err)
+    {
+        int fd = open(cmd->redirect_err,
+                      O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) { perror(cmd->redirect_err); return -1; }
+        if (dup2(fd, STDERR_FILENO) < 0) { perror("dup2 stderr"); return -1; }
+        close(fd);
+    }
+
+    return 0;
+}
+
+/* ─────────────────────────────────────────────
+ *  Single external command  (no pipes)
+ * ───────────────────────────────────────────── */
+void command_external(char **args, char **env)
+{
+    pid_t pid = fork();
+    if (pid < 0)
+    {
+        perror("fork");
         return;
     }
 
-    // Wait until child process exits.
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    // Get exit code
-    DWORD exitCode;
-    if ((GetExitCodeProcess(pi.hProcess, &exitCode)) && exitCode!=0) {
-        printf("Program exited with code %lu\n", exitCode);
+    if (pid == 0)
+    {
+        /* child */
+        char *path = find_command_in_path(args[0], env);
+        if (!path)
+        {
+            fprintf(stderr, "shelly: %s: command not found\n", args[0]);
+            exit(127);
+        }
+        execve(path, args, env);
+        perror("execve");
+        exit(1);
     }
 
-    // Close process and thread handles. 
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-#else
-    // Unix/Linux implementation using fork/exec
-    int pid = fork();
-    if (pid == -1) {
-        perror("fork couldn't create a new process");
-    } else if (pid == 0) {
-        char* pathofexe = find_command_in_path(args[0], env);
-        if (!pathofexe) {
-            printf("Invalid Command\n");
-            perror("path not found of the command requested");
+    /* parent */
+    int status;
+    waitpid(pid, &status, 0);
+    report_status(status);
+}
+
+/* ─────────────────────────────────────────────
+ *  Pipeline execution
+ *
+ *  For N commands we need N-1 pipes.
+ *
+ *  Layout (example, N=3):
+ *
+ *    cmd[0] ──pipe[0]──► cmd[1] ──pipe[1]──► cmd[2]
+ *
+ *  Each pipe is an int[2]: [0]=read end, [1]=write end.
+ *
+ *  Child i:
+ *    - If not first:  dup2(pipe[i-1][0], STDIN)
+ *    - If not last:   dup2(pipe[i][1],   STDOUT)
+ *    - Close ALL pipe fds (it now holds them via stdin/stdout)
+ *    - Apply any explicit redirections from the Command struct
+ *    - execve
+ *
+ *  Parent:
+ *    - Close ALL pipe fds after forking all children
+ *    - waitpid for every child
+ * ───────────────────────────────────────────── */
+void execute_pipeline(Command *commands, int cmd_count, char **env)
+{
+    int n_pipes = cmd_count - 1;
+
+    /* allocate pipe array */
+    int (*pipes)[2] = malloc(sizeof(int[2]) * n_pipes);
+    if (!pipes) { perror("malloc pipes"); return; }
+
+    /* create all pipes up front */
+    for (int i = 0; i < n_pipes; i++)
+    {
+        if (pipe(pipes[i]) < 0)
+        {
+            perror("pipe");
+            /* close pipes already opened */
+            for (int j = 0; j < i; j++) { close(pipes[j][0]); close(pipes[j][1]); }
+            free(pipes);
+            return;
+        }
+    }
+
+    pid_t *pids = malloc(sizeof(pid_t) * cmd_count);
+    if (!pids) { perror("malloc pids"); free(pipes); return; }
+
+    /* ── fork one child per command ── */
+    for (int i = 0; i < cmd_count; i++)
+    {
+        pids[i] = fork();
+
+        if (pids[i] < 0)
+        {
+            perror("fork");
+            /* best-effort: kill siblings already forked */
+            for (int j = 0; j < i; j++) kill(pids[j], SIGTERM);
+            break;
+        }
+
+        if (pids[i] == 0)
+        {
+            /* ── CHILD i ── */
+
+            /* wire up stdin from previous pipe */
+            if (i > 0)
+            {
+                if (dup2(pipes[i-1][0], STDIN_FILENO) < 0)
+                { perror("dup2 pipe stdin"); exit(1); }
+            }
+
+            /* wire up stdout to next pipe */
+            if (i < n_pipes)
+            {
+                if (dup2(pipes[i][1], STDOUT_FILENO) < 0)
+                { perror("dup2 pipe stdout"); exit(1); }
+            }
+
+            /* close ALL pipe fds — child inherited them all */
+            for (int p = 0; p < n_pipes; p++)
+            {
+                close(pipes[p][0]);
+                close(pipes[p][1]);
+            }
+
+            /* apply explicit file redirections (overrides pipe if set) */
+            if (apply_redirections(&commands[i]) < 0)
+                exit(1);
+
+            /* find and exec */
+            char *path = find_command_in_path(commands[i].args[0], env);
+            if (!path)
+            {
+                fprintf(stderr, "shelly: %s: command not found\n",
+                        commands[i].args[0]);
+                exit(127);
+            }
+            execve(path, commands[i].args, env);
+            perror("execve");
             exit(1);
         }
-        execve(pathofexe, args, env);
-        perror("Execution failed");
-        exit(1);
-    } else {
-        int status;
-        waitpid(pid, &status, 0);
-        if (WIFEXITED(status)) {
-            printf("Program exited sucessfully %d\n", WEXITSTATUS(status));
-        } else if (WIFSIGNALED(status)) {
-            int sig = WTERMSIG(status);
-            char* signal = strsignal(sig);
-            printf("Program killed by a signal %s", signal);
-            if (WCOREDUMP(status)) {
-                printf(" (core dumped) \n");
-            }
-        } else if (WIFSTOPPED(status)) {
-            int sig = WSTOPSIG(status);
-            char* signal = strsignal(sig);
-            printf("Process was stopped by a signal %s", signal);
-        }
+        /* parent continues to next iteration */
     }
-#endif
+
+    /* ── PARENT: close all pipe fds ── */
+    for (int i = 0; i < n_pipes; i++)
+    {
+        close(pipes[i][0]);
+        close(pipes[i][1]);
+    }
+
+    /* ── PARENT: wait for all children ── */
+    for (int i = 0; i < cmd_count; i++)
+    {
+        int status;
+        waitpid(pids[i], &status, 0);
+        report_status(status);
+    }
+
+    free(pids);
+    free(pipes);
 }

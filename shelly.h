@@ -101,5 +101,6 @@ char **command_unset(char **args, char ***env);
 
 void  command_external(char **args, char **env);
 char *find_command_in_path(char *command, char **env);
+void execute_pipeline(Command *commands,int cmd_count,char** env);
 
 #endif /* SHELLY_H */

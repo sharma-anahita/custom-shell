@@ -7,23 +7,62 @@
 
 #include "shelly.h"
 
-
-// This is a simple shell implementation in C
-// what this shell is going to support
-// execute the inbuilt commands
-// execute the external commands
-// we will also manage path through our shell
-// and error handling will also be done
-// we will first have to create a loop that will keep on running until the user wants to exit
-
-int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
+/* ─────────────────────────────────────────────
+ *  Execute a single built-in or external command.
+ *  Redirections on a single command are handled
+ *  by command_external → apply_redirections.
+ *  Built-ins get redirections applied in the
+ *  parent process directly (simple open/dup2).
+ * ───────────────────────────────────────────── */
+static void apply_redirections_parent(Command *cmd,
+                                      int *saved_in,
+                                      int *saved_out,
+                                      int *saved_err)
 {
-    // this function will execute the inbuilt commands
-    // cd, pwd,whihch, echo,exit,help,env,set,unset,etc
+    /* save originals so we can restore after built-in runs */
+    *saved_in  = dup(STDIN_FILENO);
+    *saved_out = dup(STDOUT_FILENO);
+    *saved_err = dup(STDERR_FILENO);
+
+    if (cmd->redirect_in)
+    {
+        int fd = open(cmd->redirect_in, O_RDONLY);
+        if (fd < 0) perror(cmd->redirect_in);
+        else { dup2(fd, STDIN_FILENO); close(fd); }
+    }
+    if (cmd->redirect_out)
+    {
+        int flags = O_WRONLY | O_CREAT | (cmd->append ? O_APPEND : O_TRUNC);
+        int fd    = open(cmd->redirect_out, flags, 0644);
+        if (fd < 0) perror(cmd->redirect_out);
+        else { dup2(fd, STDOUT_FILENO); close(fd); }
+    }
+    if (cmd->redirect_err)
+    {
+        int fd = open(cmd->redirect_err, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) perror(cmd->redirect_err);
+        else { dup2(fd, STDERR_FILENO); close(fd); }
+    }
+}
+
+static void restore_std_fds(int saved_in, int saved_out, int saved_err)
+{
+    dup2(saved_in,  STDIN_FILENO);  close(saved_in);
+    dup2(saved_out, STDOUT_FILENO); close(saved_out);
+    dup2(saved_err, STDERR_FILENO); close(saved_err);
+}
+
+int shell_builtin_execute(Command *cmd, char ***env, char **inputDirectory)
+{
+    char **args = cmd->args;
+
+    /* apply redirections in the parent for built-ins */
+    int sin, sout, serr;
+    apply_redirections_parent(cmd, &sin, &sout, &serr);
+
     if (my_strcmp(args[0], "cd") == 0)
     {
-        printf("you called cd\n");
-        command_cd(args, inputDirectory,*env);
+        command_cd(args, inputDirectory, *env);
     }
     else if (my_strcmp(args[0], "pwd") == 0)
     {
@@ -35,7 +74,7 @@ int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "echo") == 0)
     {
-        command_echo(args,*env);
+        command_echo(args, *env);
     }
     else if (my_strcmp(args[0], "help") == 0)
     {
@@ -52,57 +91,83 @@ int shell_builtin_execute(char **args, char ***env, char **inputDirectory)
     }
     else if (my_strcmp(args[0], "set") == 0)
     {
-        char** newenv = command_set(args, env);
-        if(newenv){
-            free(*env);
-            *env = newenv;
-        }
+        char **newenv = command_set(args, env);
+        if (newenv) { free(*env); *env = newenv; }
     }
     else if (my_strcmp(args[0], "unset") == 0)
     {
-        char** newenv = command_unset(args, env);
-        if(newenv){
-            free(*env);
-            *env = newenv;
-        }
-        else{
-            perror("newenv not allocated");
-        }
+        char **newenv = command_unset(args, env);
+        if (newenv) { free(*env); *env = newenv; }
+        else perror("unset: allocation failed");
     }
     else
     {
+        /* external single command — restore fds first,
+           externals.c handles its own redirections in the child */
+        restore_std_fds(sin, sout, serr);
         command_external(args, *env);
+        return 0;
     }
 
+    restore_std_fds(sin, sout, serr);
     return 0;
 }
+
+/* ─────────────────────────────────────────────
+ *  Main shell loop
+ * ───────────────────────────────────────────── */
 #define INPUT_BUFSIZE 1024
 
-//binary commands : ls, cat, grep, ps, top, etc  // will call them external commands
 void shell_loop(char **env)
 {
-    char input[INPUT_BUFSIZE];
-    char **args;
+    char  input[INPUT_BUFSIZE];
     char *inputDirectory = getcwd(NULL, 0);
 
-    while (1) {
+    while (1)
+    {
         printf("(My_Shelly)>%s ", inputDirectory);
         fflush(stdout);
 
-        if (!fgets(input, sizeof(input), stdin)) {
+        if (!fgets(input, sizeof(input), stdin))
+        {
             printf("\n");
-            break;   // EOF (Ctrl+D / Ctrl+Z)
+            break; /* EOF: Ctrl+D / Ctrl+Z */
         }
 
-        args = input_parser(input);
+        /* ── lex ── */
+        int    token_count = 0;
+        Token *tokens      = tokenize(input, &token_count); /* BUG FIX: & */
+        if (!tokens) { perror("tokenize"); exit(EXIT_FAILURE); }
 
-        if (args[0] == NULL) {
-            free_tokens(args);
+        /* ── parse ── */
+        int      cmd_count = 0;
+        Command *commands  = parse_commands(tokens, token_count, &cmd_count);
+        free_tokens_new(tokens, token_count);
+
+        if (!commands) { perror("parse_commands"); exit(EXIT_FAILURE); }
+
+        /* skip empty input */
+        if (cmd_count == 0 || commands[0].args[0] == NULL)
+        {
+            free_commands(commands, cmd_count);
             continue;
         }
 
-        shell_builtin_execute(args, &env, &inputDirectory);
-        free_tokens(args);
+        /* ── dispatch ── */
+        if (cmd_count == 1)
+        {
+            /* single command — may have redirections but no pipes */
+            shell_builtin_execute(&commands[0], &env, &inputDirectory);
+        }
+        else
+        {
+            /* pipeline: built-ins inside a pipeline run in a child,
+               so their env/dir changes won't affect the parent shell —
+               that's standard shell behaviour. */
+            execute_pipeline(commands, cmd_count, env);
+        }
+
+        free_commands(commands, cmd_count);
     }
 
     free(inputDirectory);
@@ -110,11 +175,9 @@ void shell_loop(char **env)
 
 int main(int argc, char **argv, char **env)
 {
-    
-setvbuf(stdout, NULL, _IOLBF, 0);
-    // env will help us get the environment variables
+    setvbuf(stdout, NULL, _IOLBF, 0);
     (void)argc;
-    (void)argv; // we don't need them
+    (void)argv;
     printf("Welcome to this simple shell!\n");
     shell_loop(env);
 }
