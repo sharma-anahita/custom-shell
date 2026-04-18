@@ -132,7 +132,7 @@ char *my_strconcat(char *str1, char *str2);
 int   my_strchr(const char *deli, char ch);
 char *my_strtok(char *path, const char *deli, char **save);
 char *my_getenv(const char *name, char **env);
-
+char *shell_readline(const char *prompt);
 /* ═══════════════════════════════════════════════════════════════
  *  BUILT-IN COMMANDS
  * ═══════════════════════════════════════════════════════════════ */
@@ -151,5 +151,8 @@ char **command_unset(char **args, char ***env);
 void  command_external(char **args, char **env);
 void  execute_pipeline(Command *commands, int cmd_count, char **env);
 char *find_command_in_path(char *command, char **env);
-
+// to implement tab completion
+void term_raw_enable(void);
+void term_raw_disable(void);
+int  term_read_char(void);   // returns one char 
 #endif /* SHELLY_H */

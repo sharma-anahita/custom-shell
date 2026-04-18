@@ -6,7 +6,8 @@
 CC     = gcc
 CFLAGS = -Wall -Wextra -std=c11
 
-SRCS = main.c helpers.c input_parser.c builtin.c externals.c
+SRCS = main.c helpers.c input_parser.c builtin.c externals.c \
+       terminal.c readline.c completion.c
 OBJS = $(SRCS:.c=.o)
 
 # ── detect platform ─────────────────────────────────────────────

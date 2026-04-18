@@ -9,7 +9,7 @@ void command_cd(char **args, char **inputDirectory, char **env)
     if (args[1] == NULL)
     {
         // print the current working directory
-        printf("%s\n", *inputDirectory);
+        // printf("%s\n", *inputDirectory); --> debugging statement
     }
     else
     {
@@ -43,7 +43,7 @@ void command_cd(char **args, char **inputDirectory, char **env)
         free(*inputDirectory);
         *inputDirectory = getcwd(NULL, 0);
     }
-    printf("Changed directory to: %s\n", *inputDirectory);
+    // printf("Changed directory to: %s\n", *inputDirectory); --> debugging statement
     return;
 }
 
